@@ -16,6 +16,12 @@ app.use(express.static("public"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+const userSchema = new mongoose.Schema({
+    username: {type: String, required: true}
+})
+
+const User = mongoose.model("User", userSchema);
+
 app.get("/", (req, res) => {
     res.sendFile(__dirname + "/views/index.html");
 });
