@@ -41,6 +41,31 @@ const addUser = (user, done) => {
     });
 };
 
+const addLog = (log, done) => {
+    User.findById(log.user_id, (err, user) => {
+        if (err) return console.error(err);
+
+        const newLog = new Log({
+            user_id: user._id,
+            description: log.description,
+            duration: log.duration,
+            date: log.date,
+        });
+
+        user.logs.push(newLog);
+
+        user.save((err, updatedUser) => {
+            if (err) return console.error(err);
+
+            newLog.save((err) => {
+                if (err) return console.error(err);
+            });
+
+            done(null, updatedUser);
+        });
+    });
+};
+
 app.get("/", (req, res) => {
     res.sendFile(__dirname + "/views/index.html");
 });
