@@ -22,6 +22,16 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", userSchema);
 
+const addUser = (user, done) => {
+    const newUser = new User({
+        username: user
+    });
+    newUser.save((err, data) => {
+        if(err) return console.error(err);
+        done(null, data);
+    })
+}
+
 app.get("/", (req, res) => {
     res.sendFile(__dirname + "/views/index.html");
 });
