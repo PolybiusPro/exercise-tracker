@@ -54,14 +54,15 @@ const addLog = (log, done) => {
 
         user.logs.push(newLog);
 
-        user.save((err, updatedUser) => {
+        user.save((err) => {
             if (err) return console.error(err);
 
-            newLog.save((err) => {
+            newLog.save((err, newLog) => {
                 if (err) return console.error(err);
+                done(null, newLog);
             });
 
-            done(null, updatedUser);
+            
         });
     });
 };
@@ -88,6 +89,61 @@ app.route("/api/users")
             });
         });
     });
+
+app.post(
+    "/api/users/:_id/exercises",
+    (req, res, next) => {
+
+       if(!req.body[":_id"] || !req.body.description || !req.body.duration){
+         res.status(400);
+         return res.end();
+       }
+   
+        const isValidDate = (str) => {
+            const DATE_REGEX =  /^\d{4}-\d{2}-\d{2}$/;
+            if(DATE_REGEX.test(str)){
+                return !isNaN(new Date(str))
+            }
+        }
+        
+        //check if date input exists and validate
+        if(!req.body.date){
+            req.body.date = new Date().toDateString();
+        }else {
+           if(isValidDate(req.body.date)){
+                req.body.date = new Date(req.body.date.replace('-', "/")).toDateString();
+           } else {
+                res.json({ error: "Invalid Date"})
+           }
+        }
+        
+        addLog(
+            {
+                user_id: req.body[":_id"],
+                description: req.body.description,
+                duration: req.body.duration,
+                date: req.body.date,
+            },
+            (err, data) => {
+                if (err) return console.error(err);
+                req.body.log_id = data._id;
+                next();
+            }
+        );
+    
+    }, (req, res) => {
+        console.log(req.body);
+        Log.findById(req.body.log_id).populate('user_id').exec((err, log) => {
+            res.json({
+                username: log.user_id.username,
+                description: log.description,
+                duration: log.duration,
+                date: log.date,
+                _id: log.user_id._id
+            })
+        })
+    }
+);
 
 const listener = app.listen(process.env.PORT || 3000, () => {
     console.log("Your app is listening on port " + listener.address().port);
