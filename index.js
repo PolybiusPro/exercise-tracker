@@ -18,9 +18,18 @@ app.use(express.urlencoded({ extended: true }));
 
 const userSchema = new mongoose.Schema({
     username: { type: String, required: true },
+    logs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Log" }],
+});
+
+const logSchema = new mongoose.Schema({
+    user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    description: { type: String, required: true },
+    duration: { type: Number, required: true },
+    date: { type: String, required: true },
 });
 
 const User = mongoose.model("User", userSchema);
+const Log = mongoose.model("Log", logSchema);
 
 const addUser = (user, done) => {
     const newUser = new User({
@@ -38,15 +47,20 @@ app.get("/", (req, res) => {
 
 app.route("/api/users")
     .get((req, res) => {
-        User.find({}, (err, data) => {
-            if (err) return console.error(err);
-            res.json(data);
-        });
+        User.find({})
+            .select({ username: true, _id: true })
+            .exec((err, data) => {
+                if (err) return console.error(err);
+                res.json(data);
+            });
     })
     .post((req, res) => {
         addUser(req.body.username, (err, savedUser) => {
             if (err) return console.error(err);
-            res.json(savedUser);
+            res.json({
+                username: savedUser.username,
+                _id: savedUser._id,
+            });
         });
     });
 
