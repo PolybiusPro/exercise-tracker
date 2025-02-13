@@ -16,13 +16,12 @@ app.use(express.static("public"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-
 const isValidDate = (str) => {
-    const DATE_REGEX =  /^\d{4}-\d{2}-\d{2}$/;
-    if(DATE_REGEX.test(str)){
-        return !isNaN(new Date(str))
+    const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+    if (DATE_REGEX.test(str)) {
+        return !isNaN(new Date(str));
     }
-}
+};
 
 const userSchema = new mongoose.Schema({
     username: { type: String, required: true },
@@ -72,8 +71,6 @@ const addLog = (logObj, done) => {
                 if (err) return console.error(err);
                 done(null, newLog);
             });
-
-            
         });
     });
 };
@@ -104,23 +101,22 @@ app.route("/api/users")
 app.post(
     "/api/users/:_id/exercises",
     (req, res, next) => {
-
-       if(!req.body[":_id"] || !req.body.description || !req.body.duration){
-         res.status(400);
-         return res.end();
-       }
-        
-        //check if date input exists and validate
-        if(!req.body.date){
-            req.body.date = new Date();
-        }else {
-           if(isValidDate(req.body.date)){
-                req.body.date = new Date(req.body.date.replace('-', "/"));
-           } else {
-                res.json({ error: "Invalid Date"})
-           }
+        if (!req.body[":_id"] || !req.body.description || !req.body.duration) {
+            res.status(400);
+            return res.end();
         }
-        
+
+        //check if date input exists and validate
+        if (!req.body.date) {
+            req.body.date = new Date();
+        } else {
+            if (isValidDate(req.body.date)) {
+                req.body.date = new Date(req.body.date.replace("-", "/"));
+            } else {
+                res.json({ error: "Invalid Date" });
+            }
+        }
+
         addLog(
             {
                 user_id: req.body[":_id"],
@@ -134,25 +130,64 @@ app.post(
                 next();
             }
         );
-    
-    }, (req, res) => {
-        Log.findById(req.body.log_id).populate('user_id').exec((err, log) => {
-            if(err) return console.error(err);
-            res.json({
-                username: log.user_id.username,
-                description: log.description,
-                duration: log.duration,
-                date: log.date.toDateString(),
-                _id: log.user_id._id
-            })
-        })
+    },
+    (req, res) => {
+        Log.findById(req.body.log_id)
+            .populate("user_id")
+            .exec((err, log) => {
+                if (err) return console.error(err);
+                res.json({
+                    username: log.user_id.username,
+                    description: log.description,
+                    duration: log.duration,
+                    date: log.date.toDateString(),
+                    _id: log.user_id._id,
+                });
+            });
     }
 );
 
+app.get("/api/users/:_id/logs", (req, res) => {
 
-app.get("/api/users/:_id/logs/:from?&to?&limit?",(req, res) => {
-    
-})
+    if (!req.params._id) {
+        res.status(400);
+        return res.end();
+    }
+
+    const query = req.query;
+
+    if (query.from && query.to) {
+        query.from = new Date(query.from.replace("-", "/"));
+        query.to = new Date(query.to.replace("-", "/"));
+    }
+
+    const matchParams = {
+        date: { $gte: query.from, $lte: query.to }
+    }
+
+    const matchObj = (query.from && query.to) ? matchParams : {};
+
+    //lean is needed because map spits out garbage otherwise
+    User.findById(req.params._id).lean()
+        .populate({
+            path: "log",
+            match: { ...matchObj },
+            select: "description duration date -_id",
+            options: { limit: query.limit },
+        })
+        .exec((err, user) => {
+            if (err) return console.error(err);
+            const logs = user.log.map(log => {
+                return {...log, date: new Date(log.date).toDateString()}
+            })
+            res.json({
+                username: user.username,
+                count: user.log.length,
+                _id: user._id,
+                log: logs,
+            });
+        });
+});
 
 const listener = app.listen(process.env.PORT || 3000, () => {
     console.log("Your app is listening on port " + listener.address().port);
