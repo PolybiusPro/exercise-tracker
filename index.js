@@ -101,7 +101,7 @@ app.route("/api/users")
 app.post(
     "/api/users/:_id/exercises",
     (req, res, next) => {
-        if (!req.body[":_id"] || !req.body.description || !req.body.duration) {
+        if (!req.params._id || !req.body.description || !req.body.duration) {
             res.status(400);
             return res.end();
         }
@@ -119,7 +119,7 @@ app.post(
 
         addLog(
             {
-                user_id: req.body[":_id"],
+                user_id: req.params._id,
                 description: req.body.description,
                 duration: req.body.duration,
                 date: req.body.date,
