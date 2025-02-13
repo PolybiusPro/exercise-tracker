@@ -18,7 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 
 const userSchema = new mongoose.Schema({
     username: { type: String, required: true },
-    logs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Log" }],
+    log: [{ type: mongoose.Schema.Types.ObjectId, ref: "Log" }],
 });
 
 const logSchema = new mongoose.Schema({
@@ -41,19 +41,22 @@ const addUser = (user, done) => {
     });
 };
 
-const addLog = (log, done) => {
-    User.findById(log.user_id, (err, user) => {
+const addLog = (logObj, done) => {
+    //find the user specified in logObj
+    User.findById(logObj.user_id, (err, user) => {
         if (err) return console.error(err);
 
         const newLog = new Log({
             user_id: user._id,
-            description: log.description,
-            duration: log.duration,
-            date: log.date,
+            description: logObj.description,
+            duration: logObj.duration,
+            date: logObj.date,
         });
 
-        user.logs.push(newLog);
+        //push to log
+        user.log.push(newLog);
 
+        //save user with log added
         user.save((err) => {
             if (err) return console.error(err);
 
@@ -132,8 +135,8 @@ app.post(
         );
     
     }, (req, res) => {
-        console.log(req.body);
         Log.findById(req.body.log_id).populate('user_id').exec((err, log) => {
+            if(err) return console.error(err);
             res.json({
                 username: log.user_id.username,
                 description: log.description,
