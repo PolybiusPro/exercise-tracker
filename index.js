@@ -16,6 +16,14 @@ app.use(express.static("public"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+
+const isValidDate = (str) => {
+    const DATE_REGEX =  /^\d{4}-\d{2}-\d{2}$/;
+    if(DATE_REGEX.test(str)){
+        return !isNaN(new Date(str))
+    }
+}
+
 const userSchema = new mongoose.Schema({
     username: { type: String, required: true },
     log: [{ type: mongoose.Schema.Types.ObjectId, ref: "Log" }],
@@ -25,7 +33,7 @@ const logSchema = new mongoose.Schema({
     user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     description: { type: String, required: true },
     duration: { type: Number, required: true },
-    date: { type: String, required: true },
+    date: { type: Date, required: true },
 });
 
 const User = mongoose.model("User", userSchema);
@@ -101,20 +109,13 @@ app.post(
          res.status(400);
          return res.end();
        }
-   
-        const isValidDate = (str) => {
-            const DATE_REGEX =  /^\d{4}-\d{2}-\d{2}$/;
-            if(DATE_REGEX.test(str)){
-                return !isNaN(new Date(str))
-            }
-        }
         
         //check if date input exists and validate
         if(!req.body.date){
-            req.body.date = new Date().toDateString();
+            req.body.date = new Date();
         }else {
            if(isValidDate(req.body.date)){
-                req.body.date = new Date(req.body.date.replace('-', "/")).toDateString();
+                req.body.date = new Date(req.body.date.replace('-', "/"));
            } else {
                 res.json({ error: "Invalid Date"})
            }
@@ -141,12 +142,17 @@ app.post(
                 username: log.user_id.username,
                 description: log.description,
                 duration: log.duration,
-                date: log.date,
+                date: log.date.toDateString(),
                 _id: log.user_id._id
             })
         })
     }
 );
+
+
+app.get("/api/users/:_id/logs/:from?&to?&limit?",(req, res) => {
+    
+})
 
 const listener = app.listen(process.env.PORT || 3000, () => {
     console.log("Your app is listening on port " + listener.address().port);
